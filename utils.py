@@ -201,6 +201,109 @@ PRESETS = {
 
 
 # ─────────────────────────────────────────────
+# Leak component library
+# ─────────────────────────────────────────────
+
+# Each entry: (display_name, typical_Q_mbarls_per_unit, description)
+# Q values are per single component / per meter of weld, etc.
+LEAK_COMPONENTS: dict[str, dict] = {
+    # ── Elastomer seals ────────────────────────────────────────────────────
+    "O-Ring (Viton, DN16)":          {"Q": 1e-7,  "unit": "per seal",   "category": "Elastomer Seal",
+                                       "note": "Viton (FKM) O-ring, DN16 flange. Typical for roughing/medium vacuum."},
+    "O-Ring (Viton, DN40)":          {"Q": 2e-7,  "unit": "per seal",   "category": "Elastomer Seal",
+                                       "note": "Viton (FKM) O-ring, DN40 flange."},
+    "O-Ring (Viton, DN63)":          {"Q": 4e-7,  "unit": "per seal",   "category": "Elastomer Seal",
+                                       "note": "Viton (FKM) O-ring, DN63 flange."},
+    "O-Ring (Viton, DN100)":         {"Q": 6e-7,  "unit": "per seal",   "category": "Elastomer Seal",
+                                       "note": "Viton (FKM) O-ring, DN100 flange."},
+    "O-Ring (Viton, DN160)":         {"Q": 1e-6,  "unit": "per seal",   "category": "Elastomer Seal",
+                                       "note": "Viton (FKM) O-ring, DN160 flange."},
+    "O-Ring (NBR/Buna-N, DN40)":     {"Q": 5e-7,  "unit": "per seal",   "category": "Elastomer Seal",
+                                       "note": "NBR O-ring. Higher permeation than Viton; not recommended for HV."},
+    "O-Ring (EPDM, DN40)":           {"Q": 8e-7,  "unit": "per seal",   "category": "Elastomer Seal",
+                                       "note": "EPDM O-ring. High gas permeation; rough vacuum only."},
+    "O-Ring (Silicone, DN40)":       {"Q": 2e-6,  "unit": "per seal",   "category": "Elastomer Seal",
+                                       "note": "Silicone O-ring. Very high permeation; rough vacuum only."},
+    "O-Ring (PTFE, DN40)":           {"Q": 3e-8,  "unit": "per seal",   "category": "Elastomer Seal",
+                                       "note": "PTFE O-ring. Lower permeation but poor elasticity."},
+    # ── Metal seals ────────────────────────────────────────────────────────
+    "CF Flange Copper Gasket (DN16)": {"Q": 1e-11, "unit": "per seal",  "category": "Metal Seal",
+                                        "note": "ConFlat (CF) copper gasket. Standard for UHV applications."},
+    "CF Flange Copper Gasket (DN40)": {"Q": 2e-11, "unit": "per seal",  "category": "Metal Seal",
+                                        "note": "ConFlat (CF) copper gasket, DN40."},
+    "CF Flange Copper Gasket (DN63)": {"Q": 3e-11, "unit": "per seal",  "category": "Metal Seal",
+                                        "note": "ConFlat (CF) copper gasket, DN63."},
+    "CF Flange Copper Gasket (DN100)":{"Q": 5e-11, "unit": "per seal",  "category": "Metal Seal",
+                                        "note": "ConFlat (CF) copper gasket, DN100."},
+    "CF Flange Aluminium Gasket (DN40)":{"Q": 5e-11,"unit": "per seal", "category": "Metal Seal",
+                                          "note": "CF aluminium gasket. Slightly higher leak rate than copper."},
+    "ISO-K Claw Clamp (DN40)":        {"Q": 1e-8,  "unit": "per seal",  "category": "Metal Seal",
+                                        "note": "ISO-K claw clamp with centering ring. Medium vacuum."},
+    "ISO-K Claw Clamp (DN100)":       {"Q": 3e-8,  "unit": "per seal",  "category": "Metal Seal",
+                                        "note": "ISO-K claw clamp, DN100."},
+    # ── Valves ─────────────────────────────────────────────────────────────
+    "Gate Valve (DN40, Viton)": {"Q": 1e-7,  "unit": "per valve", "category": "Valve",
+                                  "note": "Viton-sealed gate valve. Typical for HV systems."},
+    "Gate Valve (DN63, Viton)": {"Q": 2e-7,  "unit": "per valve", "category": "Valve",
+                                  "note": "Viton-sealed gate valve, DN63."},
+    "Gate Valve (DN40, Metal)": {"Q": 1e-10, "unit": "per valve", "category": "Valve",
+                                  "note": "All-metal gate valve for UHV."},
+    "Angle Valve (DN16, Viton)":{"Q": 5e-8,  "unit": "per valve", "category": "Valve",
+                                  "note": "Viton-sealed angle valve."},
+    "Butterfly Valve (DN63)":   {"Q": 5e-6,  "unit": "per valve", "category": "Valve",
+                                  "note": "Butterfly valve. Suitable for rough vacuum only."},
+    "Needle Valve (small)":     {"Q": 1e-8,  "unit": "per valve", "category": "Valve",
+                                  "note": "Small needle valve with metal tip."},
+    # ── Feedthroughs ───────────────────────────────────────────────────────
+    "Electrical Feedthrough (CF, 1 pin)":  {"Q": 1e-10, "unit": "per feedthrough", "category": "Feedthrough",
+                                             "note": "Single-pin CF electrical feedthrough."},
+    "Electrical Feedthrough (CF, 10 pin)": {"Q": 5e-10, "unit": "per feedthrough", "category": "Feedthrough",
+                                             "note": "10-pin CF electrical feedthrough."},
+    "Rotary Feedthrough (Viton)": {"Q": 1e-6, "unit": "per feedthrough", "category": "Feedthrough",
+                                   "note": "Viton-sealed rotary feedthrough."},
+    "Rotary Feedthrough (Ferrofluid)": {"Q": 1e-9, "unit": "per feedthrough", "category": "Feedthrough",
+                                        "note": "Ferrofluidic rotary feedthrough. Very low leak rate."},
+    "Viewport (CF, glass-metal)": {"Q": 1e-11, "unit": "per viewport", "category": "Feedthrough",
+                                   "note": "CF viewport with glass-to-metal seal."},
+    # ── Welds / Joints ─────────────────────────────────────────────────────
+    "TIG Weld (stainless steel)": {"Q": 1e-11, "unit": "per meter", "category": "Weld",
+                                   "note": "High-quality TIG weld on stainless steel. UHV-compatible."},
+    "Brazed Joint (copper)": {"Q": 1e-10, "unit": "per joint", "category": "Weld",
+                              "note": "Brazed copper joint."},
+    # ── Custom ─────────────────────────────────────────────────────────────
+    "Custom Component": {"Q": 1e-8, "unit": "per component", "category": "Custom",
+                         "note": "User-defined component. Enter your own leak rate."},
+}
+
+# Sorted list of categories for grouping in the UI
+LEAK_CATEGORIES = [
+    "Elastomer Seal",
+    "Metal Seal",
+    "Valve",
+    "Feedthrough",
+    "Weld",
+    "Custom",
+]
+
+
+def total_leak_rate(components: list[dict]) -> float:
+    """
+    Compute the total leak rate from a list of component dicts.
+
+    Each dict must have keys:
+      - 'name'  : str  — component name (key in LEAK_COMPONENTS)
+      - 'count' : int  — number of identical components
+      - 'Q_each': float — leak rate per component in mbar·L/s
+
+    Returns
+    -------
+    float
+        Total leak rate in mbar·L/s.
+    """
+    return sum(c["count"] * c["Q_each"] for c in components)
+
+
+# ─────────────────────────────────────────────
 # Physical interpretation text generator
 # ─────────────────────────────────────────────
 def generate_interpretation(

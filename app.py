@@ -43,6 +43,9 @@ from utils import (
     fmt_pressure, fmt_time, fmt_speed, fmt_throughput, fmt_mfp, fmt_kn, fmt_re,
     generate_interpretation,
     PRESETS,
+    LEAK_COMPONENTS,
+    LEAK_CATEGORIES,
+    total_leak_rate,
 )
 from plots import (
     plot_pressure_vs_time,
@@ -155,21 +158,100 @@ with st.sidebar:
     p_target = 10.0 ** p_target_exp
     st.caption(f"p_target = **{fmt_pressure(p_target)}**")
 
-    # ── Gas load ────────────────────────────────────────────────────────────
-    st.subheader("Gas Load")
-    ignore_leak = st.checkbox("Ignore Leak Rate", value=False)
-    Q_leak_exp = st.slider(
-        "Leak Rate Q_L (mbar·L/s, exponent)",
-        min_value=-12, max_value=-2,
-        value=-7,
-        step=1,
-        format="10^%d",
-        disabled=ignore_leak,
-        help="Leak rate into the chamber in mbar·L/s.",
-    )
-    Q_leak = 0.0 if ignore_leak else 10.0 ** Q_leak_exp
+    # ── Gas load — component-based leak rate builder ─────────────────────────
+    st.subheader("Gas Load — Leak Sources")
+
+    # Initialise session state for the component list
+    if "leak_components" not in st.session_state:
+        st.session_state.leak_components = []   # list of dicts
+
+    ignore_leak = st.checkbox("Ignore All Leaks", value=False)
+
     if not ignore_leak:
-        st.caption(f"Q_L = **{fmt_throughput(Q_leak)}**")
+        # ── Add a new component ───────────────────────────────────────────────
+        with st.expander("➕ Add Leak Source", expanded=len(st.session_state.leak_components) == 0):
+            # Category filter
+            cat_filter = st.selectbox(
+                "Category",
+                options=["(All)"] + LEAK_CATEGORIES,
+                key="lc_cat",
+            )
+            # Filtered component names
+            if cat_filter == "(All)":
+                comp_names = list(LEAK_COMPONENTS.keys())
+            else:
+                comp_names = [
+                    k for k, v in LEAK_COMPONENTS.items()
+                    if v["category"] == cat_filter
+                ]
+
+            selected_comp = st.selectbox(
+                "Component",
+                options=comp_names,
+                key="lc_name",
+            )
+            comp_info = LEAK_COMPONENTS[selected_comp]
+
+            # Show note
+            st.caption(f"_{comp_info['note']}_")
+            st.caption(f"Typical: **{comp_info['Q']:.1e} mbar·L/s** {comp_info['unit']}")
+
+            col_cnt, col_q = st.columns([1, 2])
+            with col_cnt:
+                count = st.number_input(
+                    "Count", min_value=1, max_value=100, value=1,
+                    step=1, key="lc_count",
+                )
+            with col_q:
+                # Allow user to override the typical value
+                q_exp_default = int(round(math.log10(comp_info["Q"])))
+                q_exp = st.slider(
+                    "Q per unit (exponent)",
+                    min_value=-13, max_value=-2,
+                    value=q_exp_default,
+                    step=1,
+                    format="10^%d",
+                    key="lc_q_exp",
+                )
+                q_each = 10.0 ** q_exp
+                st.caption(f"Q per unit = **{q_each:.2e} mbar·L/s**")
+
+            if st.button("Add to List", type="primary"):
+                st.session_state.leak_components.append({
+                    "name":   selected_comp,
+                    "count":  int(count),
+                    "Q_each": q_each,
+                    "unit":   comp_info["unit"],
+                    "category": comp_info["category"],
+                })
+                st.rerun()
+
+        # ── Current component list ────────────────────────────────────────────
+        if st.session_state.leak_components:
+            st.markdown("**Defined Leak Sources:**")
+            for i, comp in enumerate(st.session_state.leak_components):
+                c1, c2, c3 = st.columns([3, 2, 1])
+                c1.markdown(
+                    f"**{comp['count']}×** {comp['name']}"
+                )
+                c2.markdown(
+                    f"`{comp['count'] * comp['Q_each']:.2e}` mbar·L/s"
+                )
+                if c3.button("🗑", key=f"del_{i}", help="Remove this component"):
+                    st.session_state.leak_components.pop(i)
+                    st.rerun()
+
+            if st.button("🗑 Clear All"):
+                st.session_state.leak_components.clear()
+                st.rerun()
+
+            Q_leak = total_leak_rate(st.session_state.leak_components)
+            st.success(f"**Total Q_L = {fmt_throughput(Q_leak)}**")
+        else:
+            st.info("No leak sources defined. Add components above or ignore all leaks.")
+            Q_leak = 0.0
+    else:
+        Q_leak = 0.0
 
     # ── Expert: Outgassing, Temperature, Gas type ────────────────────────────
     if expert_mode:
@@ -302,7 +384,7 @@ with tab1:
             "Pipe Length l",
             "Starting Pressure p₀",
             "Target Pressure p_target",
-            "Leak Rate Q_L",
+            "Total Leak Rate Q_L",
             "Outgassing Q_out",
             "Temperature T",
             "Gas Type",
@@ -323,6 +405,23 @@ with tab1:
         ],
     }
     st.dataframe(pd.DataFrame(summary_data), use_container_width=True, hide_index=True)
+
+    # ── Individual leak source breakdown ───────────────────────────────────
+    if st.session_state.get("leak_components"):
+        st.subheader("Leak Source Breakdown")
+        leak_rows = []
+        for comp in st.session_state.leak_components:
+            q_total_comp = comp["count"] * comp["Q_each"]
+            pct = (q_total_comp / Q_leak * 100) if Q_leak > 0 else 0.0
+            leak_rows.append({
+                "Component":      comp["name"],
+                "Category":       comp["category"],
+                "Count":          comp["count"],
+                "Q per unit (mbar·L/s)": f"{comp['Q_each']:.2e}",
+                "Q total (mbar·L/s)":   f"{q_total_comp:.2e}",
+                "Share (%)": f"{pct:.1f}",
+            })
+        st.dataframe(pd.DataFrame(leak_rows), use_container_width=True, hide_index=True)
 
 
 # ══════════════════════════════════════════════
@@ -598,7 +697,17 @@ with tab6:
         mime="text/csv",
     )
 
-    # ── JSON parameter export ────────────────────────────────────────────────
+    # ── JSON parameter export ───────────────────────────────────────────────────────
+    leak_components_export = [
+        {
+            "name":   c["name"],
+            "category": c["category"],
+            "count":  c["count"],
+            "Q_each_mbarls": c["Q_each"],
+            "Q_total_mbarls": c["count"] * c["Q_each"],
+        }
+        for c in st.session_state.get("leak_components", [])
+    ]
     params_dict = {
         "V_L":              V,
         "S_pump_ls":        S_pump,
@@ -606,7 +715,8 @@ with tab6:
         "l_m":              l_m,
         "p_0_mbar":         p_0,
         "p_target_mbar":    p_target,
-        "Q_leak_mbarls":    Q_leak,
+        "Q_leak_total_mbarls": Q_leak,
+        "leak_components":  leak_components_export,
         "Q_outgassing_mbarls": Q_outgassing,
         "T_K":              T,
         "gas":              gas,
