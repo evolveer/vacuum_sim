@@ -1,6 +1,6 @@
 # Vacuum Chamber Evacuation Simulation
 
-This repository contains a fully interactive physical simulation of a vacuum chamber pump-down process, built with Python and Streamlit. The simulation calculates pressure decay over time, flow regimes (viscous, transitional, molecular), effective pumping speed, and gas throughput based on the specified chamber and pump parameters.
+This repository contains a fully interactive physical simulation of a vacuum chamber pump-down process, built with Python and Streamlit. The simulation calculates pressure decay over time, flow regimes (viscous, transitional, molecular), effective pumping speed, differtent added up Leak Sources and gas throughput based on the specified chamber and pump parameters.
 
 ## Prerequisites
 
